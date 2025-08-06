@@ -1,6 +1,6 @@
 #include <raylib.h>
 #include <iostream>
-#include <string>
+#include <cstring>
 #include <sstream>
 #include <math.h>
 
@@ -23,26 +23,6 @@ struct AnimHead
     float runningTime;
 };
 
-void BackgroundSetup(Texture texture, Texture flip)
-{
-        //https://www.reddit.com/r/raylib/comments/14l6x6r/is_there_a_way_to_use_hexcode_to_define_colour
-        Color bgColor = GetColor(0x6B1B18ff);
-        ClearBackground(bgColor);
-
-        DrawTextureEx(texture, {0,0}, 0, 1, WHITE);
-        Vector2 bgPos{texture.width, 0.0};
-        DrawTextureEx(flip, bgPos, 0, 1, WHITE);
-        Vector2 bg1Pos{texture.width*2, 0.0};
-        DrawTextureEx(texture, bg1Pos, 0, 1, WHITE);
-
-        //draw background
-        bgPos.x -= 20 * GetFrameTime();
-
-        if (bgPos.x <= -texture.width*2)
-        {
-            bgPos.x = 0.0;
-        }
-}
 
 void GameInputs(int &X, int &Y, float velocity)
 {
@@ -94,9 +74,11 @@ int main()
     Vector2 reflectionPos;
     bool hasReflected = false;
     float reflectionCooldown{0.5f};
+    float playerHealth{100};
 
     //Imported Naruto. Data types custom to raylib
     Texture2D naruto = LoadTexture("NarutoSprites/Naruto/NarutoRun.png"); //loading texture to variable
+    Texture2D narutoHealth = LoadTexture("NarutoSprites/Naruto/NarutoHealthIcon.png"); 
     AnimHead narutoData;
     narutoData.rec.width = naruto.width/5;
     narutoData.rec.height = naruto.height;
@@ -135,6 +117,7 @@ int main()
     Texture2D rockStand = LoadTexture("NarutoSprites/Background/Stances.png");
     Rectangle rStand{0, 0, rockStand.width/5, rockStand.height/5};
     Vector2 rPosition{};
+    float bgX;
 
     //Enemy Projectile
     Texture2D rock = LoadTexture("NarutoSprites/Pain/DevestationRock.png"); //loading texture to variable
@@ -149,10 +132,25 @@ int main()
     {
         BeginDrawing();
 
-        BackgroundSetup(background, backgroundFlipped);
+        if (playerHealth <= 0)
+            return;
+
+        //https://www.reddit.com/r/raylib/comments/14l6x6r/is_there_a_way_to_use_hexcode_to_define_colour
+        Color bgColor = GetColor(0x6B1B18ff);
+        ClearBackground(bgColor);
+
+        DrawTextureEx(background, {0,0}, 0, 1, WHITE);
+        Vector2 bgPos{background.width, 0.0};
+        DrawTextureEx(backgroundFlipped, bgPos, 0, 1, WHITE);
+        Vector2 bg1Pos{backgroundFlipped.width*2, 0.0};
+        DrawTextureEx(background, bg1Pos, 0, 1, WHITE);
+
+        DrawTextureEx(narutoHealth, {50,50}, 0, 1.5, WHITE);
+        string d = to_string(playerHealth);
+        DrawText(d.c_str(), 100, 60, 30, RED);
 
         DrawCircle(playerX, playerY, 25, BLANK);
-        DrawRectangle(enemyPositionX, enemyPositionY - 75, 70, 100, RED);
+        DrawRectangle(enemyPositionX, enemyPositionY - 75, 70, 100, BLANK);
 
          if (IsGamepadAvailable(0)){
             DrawText("Controller connected!", windowWidth/2.5, windowHeight/10, 20, RED);
@@ -170,7 +168,7 @@ int main()
         if (((IsKeyDown(KEY_LEFT_SHIFT)) || GetGamepadButtonPressed()) && !hasReflected)
         {
             reflectionPos = (Vector2){playerX + 25, playerY - 25};
-            DrawRectangle(reflectionPos.x, reflectionPos.y, 50, 50, BLUE); //reflection
+            DrawRectangle(reflectionPos.x, reflectionPos.y, 50, 100, BLUE); //reflection
             hasReflected = true;
         }
 
@@ -198,7 +196,7 @@ int main()
         }
 
         fireTime += GetFrameTime();
-        if (fireTime >= timeToFire && projectileCount < 5120)
+        if (fireTime >= timeToFire && projectileCount < 5120 && playerHealth <= 0)
         {
              fireTime = 0;
              projectiles[projectileCount].pos = (Vector2){enemyPositionX, enemyPositionY};
@@ -230,8 +228,9 @@ int main()
               else if (CheckCollisionCircles((Vector2){playerX, playerY}, 25, projectiles[i].pos, 25)) //deactivates when player is hit
               {
                 projectiles[i].active = false;
+                playerHealth -= 10;
               }
-              else if (CheckCollisionCircles(reflectionPos, 25, projectiles[i].pos, 25)) //when reflection is hit, the projectile fires back
+              else if (CheckCollisionCircles(reflectionPos, 40, projectiles[i].pos, 25)) //when reflection is hit, the projectile fires back
               {
                 projectiles[i].reflected = true;
                 reflectionPos = (Vector2){0, 0};
@@ -244,12 +243,20 @@ int main()
            }
         }
         
-        DrawCircle(projectilePos.x, projectilePos.y, 25, RED);
-        projectilePos.x -= projectileVelocity * GetFrameTime();
+        if (playerHealth <= 0)
+        {
+             DrawText("Game Over", windowWidth, windowHeight, 30, RED);
+        } 
+        else
+        {
+            DrawCircle(projectilePos.x, projectilePos.y, 25, RED);
+            projectilePos.x -= projectileVelocity * GetFrameTime();
 
-        DrawTextureRec(rockStand, rStand, rPosition, WHITE);
-        DrawTextureRec(naruto, narutoData.rec, narutoData.pos, WHITE);
-        DrawTextureRec(pain, painData.rec, painData.pos, WHITE);
+            DrawTextureRec(rockStand, rStand, rPosition, WHITE);
+            DrawTextureRec(naruto, narutoData.rec, narutoData.pos, WHITE);
+            DrawTextureRec(pain, painData.rec, painData.pos, WHITE);
+        }
+       
 
         EndDrawing();
     }
@@ -260,5 +267,6 @@ int main()
     UnloadTexture(rock);
     UnloadTexture(pain);
     UnloadTexture(rockStand);
+    UnloadTexture(narutoHealth);
     CloseWindow();
 }
