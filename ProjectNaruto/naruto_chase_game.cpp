@@ -132,9 +132,6 @@ int main()
     {
         BeginDrawing();
 
-        if (playerHealth <= 0)
-            return;
-
         //https://www.reddit.com/r/raylib/comments/14l6x6r/is_there_a_way_to_use_hexcode_to_define_colour
         Color bgColor = GetColor(0x6B1B18ff);
         ClearBackground(bgColor);
